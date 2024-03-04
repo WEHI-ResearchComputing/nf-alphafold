@@ -1,8 +1,10 @@
+#!/usr/bin/env nextflow
+
 println "*****************************************************"
 println "*  Nextflow <name> pipeline                         *"
 println "*  A Nextflow wrapper pipeline                      *"
-println "*  Written by <------------------------>            *"
-println "*  <-------------Email---------->                   *"
+println "*  Written by Research Computing Paltform           *"
+println "*  research.computing@wehi.edu.au                   *"
 println "*                                                   *"
 println "*****************************************************"
 println " Required Pipeline parameters                        "
@@ -12,21 +14,74 @@ println "Output Directory   : $params.outdir                  "
 println "*****************************************************"
 
 // include modules
-include {  Test           } from './modules/test.nf'
-include {  SplitSequences } from './modules/test.nf'
-include {  Reverse        } from './modules/test.nf'
 
 
-//Start main workflow
+// step_1_output_dir = "$params.output_dir"
+// input_files = "${params.input_dir}/*.fasta" // match everything else
+
+
+process ALPHAFOLD_Feature{
+    
+    label 'Alphafold2'
+
+    tag "${fasta}"
+
+    input:
+    path(fasta)
+
+    output:
+    path(fasta)
+
+    module 'alphafold/2.3.2'
+    script:
+    
+    """
+    today=\$(date +%F)
+    alphafold -f -o $params.outdir \
+             -t \${today} $fasta
+    """
+}
+
+process ALPHAFOLD_Inference{
+    queue 'gpuq'
+    clusterOptions '--gres=gpu:A30:1 --nice'
+ 
+    label 'Alphafold2'
+    tag "${fasta}"
+
+    input:
+    tuple val(model_index),path(fasta)
+
+
+    module 'alphafold/2.3.2'
+    script:
+    """
+    today=\$(date +%F)
+    alphafold  -o $params.outdir -t \${today} \
+               -g  true \
+               -m $params.model_preset  \
+               -n $model_index \
+               -i $params.numpredictions \
+               -r $params.model_to_relax \
+               $fasta
+    """
+}
+
+
 workflow {
 
-    Channel.fromPath(params.inputdir+"/*.fa",checkIfExists:true).set{input_ch}
+    def query_ch = Channel.fromPath(params.inputdir+"/*.fasta",checkIfExists:true)
+                          .ifEmpty {
+                                    error("""
+                                    No samples could be found! Please check whether your input directory
+                                    is correct, and that your sample name matches *.fasta.
+                                    """)
+                          }
+    fasta_ch=ALPHAFOLD_Feature(query_ch)
+
+    Channel.from(params.model_indices.split(',').toList())
+           .set { model_indicies_ch }
+
+    ALPHAFOLD_Inference(model_indicies_ch.combine(fasta_ch))
     
-    split_ch = SplitSequences(input_ch) 
-    Reverse(split_ch).view()
-
-
-    input_ch.map{ file -> tuple( file.baseName , file)}.set{mapped_input_ch}
-    Test(mapped_input_ch).view()
-
 }
