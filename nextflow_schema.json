@@ -1,0 +1,105 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://raw.githubusercontent.com/./master/nextflow_schema.json",
+    "title": ". pipeline parameters",
+    "description": "",
+    "type": "object",
+    "definitions": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "fa_icon": "fas fa-terminal",
+            "description": "Define where the pipeline should find input data and save output data.",
+            "required": [
+                "outdir",
+                "inputdir"
+            ],
+            "properties": {
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "The directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+                    "fa_icon": "fas fa-folder-open"
+                },
+                "inputdir": {
+                    "type": "string",
+                    "default": "/vast/scratch/users/iskander.j/nf-alphafold/example/af_test232",
+                    "description": "The directory where fasta files to be folded reside"
+                }
+            }
+        },
+        "model_parameters": {
+            "title": "Model Parameters",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "model_indices": {
+                    "type": "string",
+                    "default": "0",
+                    "description": "Model indices coma-separated list. Values can be any combination of number between 0,4 example: 0,1 or 0,2,3 or 0,1,2,3,4 or 1"
+                },
+                "model_preset": {
+                    "type": "string",
+                    "default": "monomer_ptm",
+                    "description": "Values can be (all|best|none)"
+                },
+                "model_to_relax": {
+                    "type": "string",
+                    "default": "best",
+                    "description": "Values can be (monomer|monomer_casp14|monomer_ptm|multimer)"
+                },
+                "max_template_date": {
+                    "type": "string"
+                },
+                "num_predictions": {
+                    "type": "integer",
+                    "default": 2
+                },
+                "database_preset": {
+                    "type": "string",
+                    "default": "full_dbs"
+                }
+            },
+            "required": [
+                "model_indices",
+                "model_preset",
+                "model_to_relax",
+                "max_template_date",
+                "num_predictions",
+                "database_preset"
+            ]
+        },
+        "extra_parameters": {
+            "title": "Extra Parameters",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "pdb_seqres_db_path": {
+                    "type": "string"
+                },
+                "custom_templates_path": {
+                    "type": "string"
+                },
+                "AF_UNIREF30_DB": {
+                    "type": "string"
+                },
+                "AF_PDB70_DB": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/definitions/input_output_options"
+        },
+        {
+            "$ref": "#/definitions/model_parameters"
+        },
+        {
+            "$ref": "#/definitions/extra_parameters"
+        }
+    ]
+}
