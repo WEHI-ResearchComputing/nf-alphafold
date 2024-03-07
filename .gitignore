@@ -1,1 +1,3 @@
 .nextflow*
+*.dot
+*.html

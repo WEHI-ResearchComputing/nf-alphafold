@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-
+import java.text.SimpleDateFormat
 println "*****************************************************"
 println "*  Nextflow <name> pipeline                         *"
 println "*  A Nextflow wrapper pipeline                      *"
@@ -36,9 +36,8 @@ process ALPHAFOLD_Feature{
     script:
     
     """
-    today=\$(date +%F)
     alphafold -f -o $params.outdir \
-             -t \${today} $fasta
+             -t $params.template_date $fasta
     """
 }
 
@@ -57,11 +56,11 @@ process ALPHAFOLD_Inference{
     script:
     """
     today=\$(date +%F)
-    alphafold  -o $params.outdir -t \${today} \
+    alphafold  -o $params.outdir -t $params.template_date \
                -g  true \
                -m $params.model_preset  \
                -n $model_index \
-               -i $params.numpredictions \
+               -i $params.num_predictions \
                -r $params.model_to_relax \
                $fasta
     """
@@ -70,6 +69,14 @@ process ALPHAFOLD_Inference{
 
 workflow {
 
+    //Check max_template_date Param
+    if (params.max_template_date==null || params.max_template_date.isEmpty())
+        params.template_date = new SimpleDateFormat("yyyy-MM-dd").format(new Date()) 
+    else
+        params.template_date = params.max_template_date
+    
+    
+    
     def query_ch = Channel.fromPath(params.inputdir+"/*.fasta",checkIfExists:true)
                           .ifEmpty {
                                     error("""
@@ -77,6 +84,8 @@ workflow {
                                     is correct, and that your sample name matches *.fasta.
                                     """)
                           }
+    
+
     fasta_ch=ALPHAFOLD_Feature(query_ch)
 
     Channel.from(params.model_indices.split(',').toList())
