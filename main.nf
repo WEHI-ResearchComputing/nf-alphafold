@@ -51,6 +51,8 @@ process ALPHAFOLD_Inference{
     input:
     tuple val(model_index),path(fasta)
 
+    output:
+    path("*.pdb")
 
     module 'alphafold/2.3.2'
     script:
