@@ -13,72 +13,17 @@ println "Input  Directory   : $params.inputdir                   "
 println "Output Directory   : $params.outdir                  " 
 println "*****************************************************"
 
-// include modules
+include {  CountUniqueSequences } from './modules/alphafold.nf'
+include {  ALPHAFOLD_Feature as Monomer_Feature } from './modules/alphafold.nf'
+include {  ALPHAFOLD_Feature as Multimer_Feature } from './modules/alphafold.nf'
 
+include {  ALPHAFOLD_Inference as Monomer_Inference } from './modules/alphafold.nf'
+include {  ALPHAFOLD_Inference as Multimer_Inference } from './modules/alphafold.nf'
 
-// step_1_output_dir = "$params.output_dir"
-// input_files = "${params.input_dir}/*.fasta" // match everything else
-
-
-process ALPHAFOLD_Feature{
-    
-    label 'Alphafold2'
-
-    tag "${fasta}"
-
-    input:
-    path(fasta)
-
-    output:
-    path(fasta)
-
-    module 'alphafold/2.3.2'
-    script:
-    
-    """
-    alphafold -f -o $params.outdir \
-             -t $params.template_date $fasta
-    """
-}
-
-process ALPHAFOLD_Inference{
-    queue 'gpuq'
-    clusterOptions '--gres=gpu:A30:1 --nice'
- 
-    label 'Alphafold2'
-    tag "${fasta}"
-
-    input:
-    tuple val(model_index),path(fasta)
-
-    output:
-    path("*.pdb")
-
-    module 'alphafold/2.3.2'
-    script:
-    """
-    today=\$(date +%F)
-    alphafold  -o $params.outdir -t $params.template_date \
-               -g  true \
-               -m $params.model_preset  \
-               -n $model_index \
-               -i $params.num_predictions \
-               -r $params.model_to_relax \
-               $fasta
-    """
-}
 
 
 workflow {
 
-    //Check max_template_date Param
-    if (params.max_template_date==null || params.max_template_date.isEmpty())
-        params.template_date = new SimpleDateFormat("yyyy-MM-dd").format(new Date()) 
-    else
-        params.template_date = params.max_template_date
-    
-    
-    
     def query_ch = Channel.fromPath(params.inputdir+"/*.fasta",checkIfExists:true)
                           .ifEmpty {
                                     error("""
@@ -87,12 +32,27 @@ workflow {
                                     """)
                           }
     
-
-    fasta_ch=ALPHAFOLD_Feature(query_ch)
-
     Channel.from(params.model_indices.split(',').toList())
            .set { model_indicies_ch }
+    
+    count_ch=CountUniqueSequences(query_ch)
 
-    ALPHAFOLD_Inference(model_indicies_ch.combine(fasta_ch))
+    count_ch.map{ name,file,count ->
+            return tuple(name,file,count.splitText(limit:1).first().trim().toInteger())
+            }
+            .branch { name,file,count ->
+                monomer  : count == 1 
+                    return tuple(name,file,"monomer_ptm")
+                multimer : count > 1 
+                    return tuple(name,file,"multimer")
+            }
+            .set { inference_ch }
+    
+    Mutli_feature_ch=Multimer_Feature(inference_ch.multimer)
+    
+    Mono_feature_ch=Monomer_Feature(inference_ch.monomer)
+
+    Monomer_Inference(Mono_feature_ch.combine(model_indicies_ch))
+    Multimer_Inference(Mutli_feature_ch.combine(model_indicies_ch))
     
 }

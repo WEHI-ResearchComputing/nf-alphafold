@@ -39,15 +39,11 @@
                     "default": "0",
                     "description": "Model indices coma-separated list. Values can be any combination of number between 0,4 example: 0,1 or 0,2,3 or 0,1,2,3,4 or 1"
                 },
-                "model_preset": {
-                    "type": "string",
-                    "default": "monomer_ptm",
-                    "description": "Values can be (all|best|none)"
-                },
+               
                 "model_to_relax": {
                     "type": "string",
                     "default": "best",
-                    "description": "Values can be (monomer|monomer_casp14|monomer_ptm|multimer)"
+                    "description": "Values can be (all|best|none)"
                 },
                 "max_template_date": {
                     "type": "string"
@@ -63,7 +59,6 @@
             },
             "required": [
                 "model_indices",
-                "model_preset",
                 "model_to_relax",
                 "max_template_date",
                 "num_predictions",
