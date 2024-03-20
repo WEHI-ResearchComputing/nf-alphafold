@@ -52,7 +52,7 @@ workflow {
     
     Mono_feature_ch=Monomer_Feature(inference_ch.monomer)
 
-    Monomer_Inference(Mono_feature_ch.combine(model_indicies_ch))
-    Multimer_Inference(Mutli_feature_ch.combine(model_indicies_ch))
+    Monomer_Inference(Mono_feature_ch.output.combine(model_indicies_ch))
+    Multimer_Inference(Mutli_feature_ch.output.combine(model_indicies_ch))
     
 }

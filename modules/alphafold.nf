@@ -27,16 +27,21 @@ process ALPHAFOLD_Feature{
     tuple val(fasta),path(fasta_file),val(preset)
 
     output:
-    tuple val(fasta), path(fasta_file),val(preset)
+    tuple val(fasta),path(fasta_file),val(preset), emit:output
+    path("${fasta}/*.pkl")
+
 
 
     module 'alphafold/2.3.2'
     script:
     
     """
-    alphafold -f -o $params.outdir  -m $preset \
+    alphafold -f -o ./  -m $preset \
             -i $params.num_predictions \
             -t $params.max_template_date $fasta_file
+    mkdir -p ${params.outdir}/${fasta}/msas
+    cp -r ${fasta}/msas ${params.outdir}/${fasta}/msas
+    cp ${fasta}/*.pkl ${params.outdir}/${fasta}/
     """
 }
 
@@ -47,13 +52,25 @@ process ALPHAFOLD_Inference{
     label 'Alphafold2'
     tag "${fasta}"
 
+    publishDir "${params.outdir}/", mode: 'copy' 
+
+    output:
+    path("${fasta}/*.pdb")
+    path("${fasta}/*.json")
+    path("${fasta}/*.pkl")
+    path("${fasta}/plots")
+
+
     input:
     tuple val(fasta),path(fasta_file),val(preset),val(model_index)
 
     module 'alphafold/2.3.2'
     script:
     """
-    alphafold  -o $params.outdir -t $params.max_template_date \
+    mkdir -p ${fasta}/msas
+    cp -r ${params.outdir}/${fasta}/msas ${fasta}/msas
+    cp ${params.outdir}/${fasta}/*.pkl ${fasta}/
+    alphafold  -o ./ -t $params.max_template_date \
                -g  true \
                -m $preset  \
                -n $model_index \
