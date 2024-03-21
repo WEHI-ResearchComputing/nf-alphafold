@@ -48,7 +48,7 @@ process ALPHAFOLD_Feature{
 process ALPHAFOLD_Inference{
     queue 'gpuq'
     clusterOptions '--gres=gpu:A30:1 --nice'
- 
+    errorStrategy 'ignore'
     label 'Alphafold2'
     tag "${fasta}"
 
