@@ -59,8 +59,7 @@ process ALPHAFOLD_Inference{
     output:
     path("${fasta}/*.pdb")
     path("${fasta}/*.json")
-    path("${fasta}/*.pkl")
-    path("${fasta}/plots")
+    path("${fasta}/plots/*.pdf")
 
 
     input:
