@@ -52,7 +52,10 @@ process ALPHAFOLD_Inference{
     label 'Alphafold2'
     tag "${fasta}"
 
-    publishDir "${params.outdir}/", mode: 'copy' 
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "*.pdb"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "*.json"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "*.pkl"
+    publishDir "${params.outdir}/plots", mode: 'copy', pattern: "*.pdf"
 
     output:
     path("${fasta}/*.pdb")
