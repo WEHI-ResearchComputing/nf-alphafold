@@ -23,25 +23,26 @@ process ALPHAFOLD_Feature{
 
     tag "${fasta}"
 
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
+    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/msas/*"
+
     input:
     tuple val(fasta),path(fasta_file),val(preset)
 
     output:
     tuple val(fasta),path(fasta_file),val(preset), emit:output
     path("${fasta}/*.pkl")
+    path("${fasta}/msas/*")
 
-
-
-    module 'alphafold/2.3.2'
     script:
     
     """
     alphafold -f -o ./  -m $preset \
             -i $params.num_predictions \
             -t $params.max_template_date $fasta_file
-    mkdir -p ${params.outdir}/${fasta}/msas
-    cp -r ${fasta}/msas ${params.outdir}/${fasta}/msas
-    cp ${fasta}/*.pkl ${params.outdir}/${fasta}/
+    #mkdir -p ${params.outdir}/${fasta}/msas
+    #cp -r ${fasta}/msas ${params.outdir}/${fasta}/msas
+    #cp ${fasta}/*.pkl ${params.outdir}/${fasta}/
     """
 }
 
@@ -52,9 +53,9 @@ process ALPHAFOLD_Inference{
     label 'Alphafold2'
     tag "${fasta}"
 
-    publishDir "${params.outdir}/${fasta}/", mode: 'copy', pattern: "*.pdb"
-    publishDir "${params.outdir}/${fasta}/", mode: 'copy', pattern: "*.json"
-    publishDir "${params.outdir}/${fasta}/plots", mode: 'copy', pattern: "*.pdf"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
+    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
 
     output:
     path("${fasta}/*.pdb")
