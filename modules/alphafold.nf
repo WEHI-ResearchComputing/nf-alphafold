@@ -55,11 +55,13 @@ process ALPHAFOLD_Inference{
 
     publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb"
     publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
     publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
 
     output:
     path("${fasta}/*.pdb")
     path("${fasta}/*.json")
+    path("${fasta}/*.pkl")
     path("${fasta}/plots/*.pdf")
 
 
