@@ -66,7 +66,6 @@ process ALPHAFOLD_Inference{
     input:
     tuple val(fasta),path(fasta_file),val(preset),val(model_index)
 
-    module 'alphafold/2.3.2'
     script:
     """
     mkdir -p ${fasta}/msas
