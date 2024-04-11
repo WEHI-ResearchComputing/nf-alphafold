@@ -11,20 +11,20 @@
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
             "required": [
-                "outdir",
-                "inputdir"
+                "inputdir",
+                "outdir"
             ],
             "properties": {
+                "inputdir": {
+                    "type": "string",
+                    "default": "/vast/scratch/users/iskander.j/nf-alphafold/example/af_test232",
+                    "description": "The directory where fasta files to be folded reside"
+                },
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
                     "description": "The directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
                     "fa_icon": "fas fa-folder-open"
-                },
-                "inputdir": {
-                    "type": "string",
-                    "default": "/vast/scratch/users/iskander.j/nf-alphafold/example/af_test232",
-                    "description": "The directory where fasta files to be folded reside"
                 }
             }
         },
@@ -37,24 +37,27 @@
                 "model_indices": {
                     "type": "string",
                     "default": "0",
-                    "description": "Model indices coma-separated list. Values can be any combination of number between 0,4 example: 0,1 or 0,2,3 or 0,1,2,3,4 or 1"
+                    "description": "Model indices coma-separated list. Values can be any combination of number between 0,4 example: 0,1 or 0,2,3 or 0,1,2,3,4 or 1",
+                    "hidden": true
                 },
-               
                 "model_to_relax": {
                     "type": "string",
                     "default": "best",
-                    "description": "Values can be (all|best|none)"
+                    "description": "Values can be (all|best|none)",
+                    "hidden": true
                 },
                 "max_template_date": {
                     "type": "string"
                 },
                 "num_predictions": {
                     "type": "integer",
-                    "default": 2
+                    "default": 2,
+                    "hidden": true
                 },
                 "database_preset": {
                     "type": "string",
-                    "default": "full_dbs"
+                    "default": "full_dbs",
+                    "hidden": true
                 }
             },
             "required": [
@@ -72,16 +75,20 @@
             "default": "",
             "properties": {
                 "pdb_seqres_db_path": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "custom_templates_path": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "AF_UNIREF30_DB": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "AF_PDB70_DB": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 }
             }
         }
