@@ -71,7 +71,7 @@ process ALPHAFOLD_Inference{
     script:
     """
     mkdir -p ${fasta}/msas
-    cp -r ${params.outdir}/${fasta}/msas ${fasta}/msas
+    cp -r ${params.outdir}/${fasta}/msas ${fasta}
     cp ${params.outdir}/${fasta}/*.pkl ${fasta}/
     alphafold  -o ./ -t $params.max_template_date \
                -g  true \
