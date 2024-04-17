@@ -1,11 +1,9 @@
 process CountUniqueSequences {
     label 'Count'
-
     tag "${fasta}"
 
     input:
     path(fasta)
-
 
     output:
     tuple val(fasta.baseName),path(fasta),path("${fasta.baseName}_count.txt")
@@ -16,15 +14,9 @@ process CountUniqueSequences {
     """
 }
 
-
 process ALPHAFOLD_Feature{
-    
     label 'Alphafold2'
-
     tag "${fasta}"
-
-    //publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
-    //publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/msas/*"
 
     input:
     tuple val(fasta),path(fasta_file),val(preset)
@@ -38,9 +30,6 @@ process ALPHAFOLD_Feature{
     alphafold -f -o ./  -m $preset \
             -i $params.num_predictions \
             -t $params.max_template_date $fasta_file
-    #mkdir -p ${params.outdir}/${fasta}/msas
-    #cp -r ${fasta}/msas ${params.outdir}/${fasta}/msas
-    #cp ${fasta}/*.pkl ${params.outdir}/${fasta}/
     """
 }
 
@@ -51,30 +40,19 @@ process ALPHAFOLD_Inference{
     label 'Alphafold2'
     tag "${fasta}"
 
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb", saveAs: { filename -> "${fasta}" }
-    //publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
-    //publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
-    //publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/ranked_0.pdb", saveAs: { filename -> "${fasta}.pdb" }
 
     output:
     path("${fasta}/*.pdb")
-    path("${fasta}/*.json")
-    path("${fasta}/*.pkl")
-    path("${fasta}/plots/*.pdf")
-
 
     input:
     tuple val(fasta),path(fasta_file),val(preset),path(pkl),path(msas),val(model_index)
 
     script:
     """
-    mkdir -p ${fasta}/msas
-    mv  bfd_uniref_hits.a3m ${fasta}/msas/
-    mv  mgnify_hits.sto ${fasta}/msas/
-    mv  uniref90_hits.sto ${fasta}/msas/
-    mv  pdb_hits.hhr ${fasta}/msas/
-    mv features.pkl ${fasta}/
-    alphafold  -o ./ -t $params.max_template_date \
+    mkdir -p ${fasta}
+    cp features.pkl ${fasta}/
+    alphafold  -u -o ./ -t $params.max_template_date \
                -g  true \
                -m $preset  \
                -n $model_index \
