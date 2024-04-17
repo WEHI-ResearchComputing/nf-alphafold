@@ -47,7 +47,8 @@
                     "hidden": true
                 },
                 "max_template_date": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "num_predictions": {
                     "type": "integer",

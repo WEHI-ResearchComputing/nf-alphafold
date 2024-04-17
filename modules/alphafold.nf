@@ -1,5 +1,5 @@
 process CountUniqueSequences {
-    label 'Alphafold2'
+    label 'Count'
 
     tag "${fasta}"
 
@@ -23,17 +23,15 @@ process ALPHAFOLD_Feature{
 
     tag "${fasta}"
 
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
-    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/msas/*"
+    //publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
+    //publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/msas/*"
 
     input:
     tuple val(fasta),path(fasta_file),val(preset)
 
     output:
-    tuple val(fasta),path(fasta_file),val(preset), emit:output
-    path("${fasta}/*.pkl")
-    path("${fasta}/msas/*")
-
+    tuple val(fasta),path(fasta_file),val(preset),path("${fasta}/*.pkl"),path("${fasta}/msas/*"),  emit:output
+    
     script:
     
     """
@@ -53,10 +51,10 @@ process ALPHAFOLD_Inference{
     label 'Alphafold2'
     tag "${fasta}"
 
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb"
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
-    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb", saveAs: { filename -> "${fasta}" }
+    //publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
+    //publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
+    //publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
 
     output:
     path("${fasta}/*.pdb")
@@ -66,13 +64,16 @@ process ALPHAFOLD_Inference{
 
 
     input:
-    tuple val(fasta),path(fasta_file),val(preset),val(model_index)
+    tuple val(fasta),path(fasta_file),val(preset),path(pkl),path(msas),val(model_index)
 
     script:
     """
     mkdir -p ${fasta}/msas
-    cp -r ${params.outdir}/${fasta}/msas ${fasta}/msas
-    cp ${params.outdir}/${fasta}/*.pkl ${fasta}/
+    mv  bfd_uniref_hits.a3m ${fasta}/msas/
+    mv  mgnify_hits.sto ${fasta}/msas/
+    mv  uniref90_hits.sto ${fasta}/msas/
+    mv  pdb_hits.hhr ${fasta}/msas/
+    mv features.pkl ${fasta}/
     alphafold  -o ./ -t $params.max_template_date \
                -g  true \
                -m $preset  \
