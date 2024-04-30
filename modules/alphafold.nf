@@ -15,6 +15,7 @@ process CountUniqueSequences {
 }
 
 process ALPHAFOLD_Feature{
+    errorStrategy 'ignore'
     label 'Alphafold2'
     tag "${fasta}"
 
