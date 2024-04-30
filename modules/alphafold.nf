@@ -27,6 +27,8 @@ process ALPHAFOLD_Feature{
     script:
     
     """
+    mkdir -p /vast/scratch/users/$USER/tmp
+    export SINGULARITY_BINDPATH="/vast/scratch/users/$USER/tmp:/tmp"
     alphafold -f -o ./  -m $preset \
             -i $params.num_predictions \
             -t $params.max_template_date $fasta_file
