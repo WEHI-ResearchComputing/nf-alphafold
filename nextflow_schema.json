@@ -72,16 +72,20 @@
             "default": "",
             "properties": {
                 "pdb_seqres_db_path": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "custom_templates_path": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "AF_UNIREF30_DB": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 },
                 "AF_PDB70_DB": {
-                    "type": "string"
+                    "type": "string",
+                    "hidden": true
                 }
             }
         }
