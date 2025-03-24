@@ -1,5 +1,5 @@
 process CountUniqueSequences {
-    label 'Alphafold2'
+    label 'report'
 
     tag "${fasta}"
 
