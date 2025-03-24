@@ -60,7 +60,7 @@ workflow {
     
     
 
-    if (params.msa_calculated == "False"){
+    if (!params.msa_calculated){
         
         Multimer_Feature(inference_ch.multimer)
         Monomer_Feature(inference_ch.monomer)
