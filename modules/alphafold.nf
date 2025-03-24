@@ -19,7 +19,7 @@ process CountUniqueSequences {
 
 process ALPHAFOLD_Feature{
     
-    label 'Alphafold2'
+    label 'Alphafold2_cpu'
 
     tag "${fasta}"
 
@@ -30,7 +30,7 @@ process ALPHAFOLD_Feature{
     tuple val(fasta),path(fasta_file),val(preset)
 
     output:
-    tuple val(fasta),path(fasta_file),val(preset), emit:output
+    tuple val(fasta),path(fasta_file),val(preset), emit:meta
     path("${fasta}/*.pkl")
     path("${fasta}/msas/*")
 
@@ -46,11 +46,11 @@ process ALPHAFOLD_Feature{
     """
 }
 
-process ALPHAFOLD_Inference{
-    queue 'gpuq'
-    clusterOptions '--gres=gpu:A30:1 --nice'
-    errorStrategy 'ignore'
+process ALPHAFOLD_Inference 
+{
+
     label 'Alphafold2'
+
     tag "${fasta}"
 
     publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb"
@@ -58,27 +58,62 @@ process ALPHAFOLD_Inference{
     publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
     publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
 
-    output:
-    path("${fasta}/*.pdb")
-    path("${fasta}/*.json")
-    path("${fasta}/*.pkl")
-    path("${fasta}/plots/*.pdf")
-
-
     input:
-    tuple val(fasta),path(fasta_file),val(preset),val(model_index)
+        tuple val(fasta),path(fasta_file),val(preset),val(model_index)
+
+    output:
+        tuple val(fasta),val(preset),path("${fasta}/*model*.p*"), emit:pdb
+        tuple val(fasta),path(fasta_file),val(preset),val(model_index), emit:pdb_meta
+        path("${fasta}/*.json")
+        path("${fasta}/plots/*.pdf")
+
+    script:
+   
+    """
+    #!/bin/bash
+    mkdir -p ${fasta}/msas
+    cp -r ${params.outdir}/${fasta}/msas ${fasta}
+    cp ${params.outdir}/${fasta}/features.pkl ${fasta}/
+    
+    alphafold  -o ./ -t $params.max_template_date \
+               -u \
+               -g  true \
+               -m $preset  \
+               -n $model_index \
+               -i $params.num_predictions \
+               -r none \
+               $fasta_file
+    """
+}
+
+process ALPHAFOLD_Relax_Only{
+    label 'Alphafold2'
+    tag "${fasta}"
+
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/ranked*.pdb"
+    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/relaxed*.pdb"
+    
+    input:
+    tuple val(fasta),val(preset),path(unrelaxed)
+
+    output:
+    tuple val(fasta),val(preset),path("${fasta}/ranked*.pdb"), emit:pdb
+    tuple val(fasta), path("${fasta}/relaxed*.pdb") , emit:pdb_relaxed
 
     script:
     """
     mkdir -p ${fasta}/msas
     cp -r ${params.outdir}/${fasta}/msas ${fasta}
-    cp ${params.outdir}/${fasta}/*.pkl ${fasta}/
+    cp ${params.outdir}/${fasta}/features.pkl ${fasta}/
+    cp *.p* ${fasta}/
+    touch ${fasta}.fasta
     alphafold  -o ./ -t $params.max_template_date \
                -g  true \
                -m $preset  \
-               -n $model_index \
-               -i $params.num_predictions \
-               -r $params.model_to_relax \
-               $fasta_file
+               -n 0,1,2,3,4 \
+               -j \
+               -i ${params.num_predictions} \
+               -r ${params.model_to_relax} \
+               ${fasta}.fasta
     """
 }

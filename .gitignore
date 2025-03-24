@@ -1,3 +1,6 @@
 .nextflow*
 *.dot
 *.html
+example/af_test232
+example/output
+bin/__pycache__
