@@ -23,7 +23,9 @@
                 },
                 "inputdir": {
                     "type": "string",
-                    "description": "The directory where fasta files to be folded reside"
+                    "format": "directory-path",
+                    "description": "The directory where fasta files to be folded reside",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },
