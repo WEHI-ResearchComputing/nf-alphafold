@@ -98,13 +98,13 @@
     },
     "allOf": [
         {
-            "$ref": "#/$defs/input_output_options"
+            "$ref": "#/definitions/input_output_options"
         },
         {
-            "$ref": "#/$defs/model_parameters"
+            "$ref": "#/definitions/model_parameters"
         },
         {
-            "$ref": "#/$defs/extra_parameters"
+            "$ref": "#/definitions/extra_parameters"
         }
     ]
 }
