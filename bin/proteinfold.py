@@ -8,7 +8,7 @@ import math
 import os
 import pickle
 import re
-import numpy as np
+import numpy as np # type: ignore
 import matplotlib.pyplot as plt # type: ignore
 from typing import Tuple
 
@@ -54,6 +54,7 @@ class ProteinFold:
         self.model_preset=model_preset
         self.model_names_extra = [f'{m}_pred_{i}' for m in MODEL_PRESETS[self.model_preset] for i in range(self.num_predictions_per_model)]
         self.plots_dir = os.path.join(self.output_dir, "plots")
+        
 
     def generate_html_from_template(self, html_template:str, mean_plddt:float):
         """Function generating the final html report from the template"""
@@ -76,7 +77,8 @@ class ProteinFold:
 
             for i, structure in enumerate(self.structures):
                 with open(structure, "r", encoding="utf-8") as struct_file:
-                    template = template.replace(f"ranked_{i}.pdb*", struct_file.read().replace("\n", "\\n"))
+                    logging.info("Embedding structure %s", structure)
+                    template = template.replace(f"*_data_ranked_{i}.pdb", struct_file.read().replace("\n", "\\n"))
             self._embed_images_in_template(template)
             logging.info("HTML report generated successfully.")
 
@@ -113,9 +115,11 @@ class ProteinFold:
     def rank_models(self, plddts: dict) -> list:
         """Rank models based on pLDDT scores"""
         ranked_order = []
+        
         for idx, (model_name, _) in enumerate(sorted(plddts.items(), key=lambda x: x[1], reverse=True)):
-            ranked_order.append(model_name)
+            ranked_order.append(f'ranked_{idx}.pdb')
             ranked_output_path = os.path.join(self.output_dir, f'ranked_{idx}.pdb')
+            
             with open(ranked_output_path, 'w', encoding='utf-8') as f:
                 relaxed_pdb_path = os.path.join(self.output_dir, f'relaxed_{model_name}.pdb')
                 unrelaxed_pdb_path = os.path.join(self.output_dir, f'unrelaxed_{model_name}.pdb')
@@ -148,7 +152,7 @@ class ProteinFold:
         non_gaps = (msa != 21).astype(float)
         non_gaps[non_gaps == 0] = np.nan
         final = non_gaps[seqid_sort] * seqid[seqid_sort, None]
-        plt.figure(figsize=(14, 4), dpi=100)
+        plt.figure(figsize=(12, 4), dpi=100)
         plt.imshow(final,
                 interpolation='nearest', aspect='auto',
                 cmap="rainbow_r", vmin=0, vmax=1, origin='lower')
@@ -169,10 +173,10 @@ class ProteinFold:
                 model_dicts[model_name] = result
 
         s = 0
-        plt.figure(figsize=(14, 4), dpi=100)
+        plt.figure(figsize=(12, 4), dpi=100)
         for model_name, value in model_dicts.items():
             plt.plot(value["plddt"], 
-                    label=f"{model_name}, plddts: {round(list(ranking_dict['plddts'].values())[s], 6)}")
+                    label=f"{model_name}, plddts: {round(list(ranking_dict['plddts'].values())[s], 4)}")
             s += 1
         #plt.legend()
         plt.legend(loc='lower left')
@@ -183,23 +187,30 @@ class ProteinFold:
 
     def _plot_pae(self, ranked_order: list, plddts: dict):
         ranking_dict={'plddts': plddts, 'order': ranked_order}
+        
         model_dicts={}
         for model_name in self.model_names_extra:
             for filenm in glob.glob(os.path.join(self.output_dir,f'result_{model_name}.pkl')):
                 result=pickle.load(open(filenm, 'rb'))
                 model_dicts[model_name] = result
-        plt.figure(figsize=(14, 4), dpi=100)
+        # Number of models to plot
+        num_models = len(model_dicts)
+        # Determine number of columns and rows (for example, 2 columns)
+        num_cols = 2
+        num_rows = math.ceil(num_models / num_cols)
         if "predicted_aligned_error" in model_dicts[self.model_names_extra[0]]:
-            for n, (model_name, value) in enumerate(model_dicts.items()):
-                plt.figure(figsize=[8 * 2, 6],dpi=100)
-                plt.subplot(1, 2, 1)
-                plt.title(f'Predicted LDDT, {model_name}')
-                plt.plot(value["plddt"], 
-                label=f"{model_name}, plddts: {round(list(ranking_dict['plddts'].values())[n], 6)}")
-                plt.subplot(1, 2, 2)
+            plt.figure(figsize=(10, 10), dpi=100)
+            for i, (model_name, value) in enumerate(model_dicts.items()):
+                plt.subplot(num_rows, num_cols, i + 1)
                 plt.title(f'Predicted Aligned Error, {model_name}')
-                plt.imshow(value["predicted_aligned_error"], label=model_name, vmin=0., vmax=value["max_predicted_aligned_error"], cmap='Greens_r')
+                plt.imshow(
+                    value["predicted_aligned_error"],
+                    vmin=0.,
+                    vmax=value["max_predicted_aligned_error"],
+                    cmap='Greens_r'
+                )
                 plt.colorbar(fraction=0.046, pad=0.04)
-                plt.savefig(f"{self.output_dir}/plots/{self.sample_name}_Pae.png")
+                plt.tight_layout()
+            plt.savefig(f"{self.output_dir}/plots/{self.sample_name}_Pae.png")
         else:
             logging.info("No predicted_aligned_error found. Make sure you choose monomer_ptm when running AlphaFold prediction.")
