@@ -73,9 +73,10 @@ workflow {
             .join(Multimer_Inference.out.pdb_meta, by:[0,1])
             .join(Multimer_Feature.out.feature, by:0)
     )
-    
-     Generate_Report(Monomer_Relaxation.out.pdb
+    println "Resolved template path: ${projectDir}/assets/proteinfold_template.html"
+    Generate_Report(Monomer_Relaxation.out.pdb
                             .mix(Multimer_Relaxation.out.pdb)
                             .combine(Channel.fromPath("${projectDir}/assets/proteinfold_template.html"))
+                            
     )
 }
