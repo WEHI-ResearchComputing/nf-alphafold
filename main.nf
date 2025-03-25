@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-import java.text.SimpleDateFormat
 
 include {  CountUniqueSequences } from './modules/alphafold.nf'
 include {  ALPHAFOLD_Feature as Monomer_Feature } from './modules/alphafold.nf'
@@ -54,53 +53,29 @@ workflow {
                 monomer  : count == 1 
                     return tuple(name,file,"monomer_ptm")
                 multimer : count > 1 
-                    return tuple(name,file,"multimer")
+                   return tuple(name,file,"multimer")
             }
             .set { inference_ch }
     
+    Multimer_Feature(inference_ch.multimer)
+    Monomer_Feature(inference_ch.monomer)
     
+    Monomer_Inference(Monomer_Feature.out.meta.combine(model_indicies_ch).combine(Monomer_Feature.out.feature, by:0))
+    Multimer_Inference(Multimer_Feature.out.meta.combine(model_indicies_ch).combine(Multimer_Feature.out.feature, by:0))
 
-    if (!params.msa_calculated){
-        
-        Multimer_Feature(inference_ch.multimer)
-        Monomer_Feature(inference_ch.monomer)
-
-        Monomer_Inference(Monomer_Feature.out.meta.combine(model_indicies_ch))
-        Multimer_Inference(Multimer_Feature.out.meta.combine(model_indicies_ch))
-
-    }
-    else {
-        Monomer_Inference(
-            inference_ch.monomer
-                .combine(model_indicies_ch)
-        )
-       
-        Multimer_Inference(
-            inference_ch.multimer
-                .combine(model_indicies_ch)
-        )
-        
-    }
     Monomer_Relaxation(
-        Monomer_Inference.out.pdb
-            .groupTuple(by:[0,1],size:number_of_model_output)
-            .map{ fasta,preset, files ->
-                return tuple(fasta,preset, files.flatten())
-            }
+            Monomer_Inference.out.pdb.groupTuple(by:[0,1],size:number_of_model_output)
+            .join(Monomer_Inference.out.pdb_meta, by:[0,1])
+            .join(Monomer_Feature.out.feature, by:0)
     )
     Multimer_Relaxation(
-        Multimer_Inference.out.pdb
-            .groupTuple(by:[0,1],size:number_of_model_output)
-            .map{ fasta,preset, files ->
-                return tuple(fasta,preset, files.flatten())
-            }
+        Multimer_Inference.out.pdb.groupTuple(by:[0,1],size:number_of_model_output)
+            .join(Multimer_Inference.out.pdb_meta, by:[0,1])
+            .join(Multimer_Feature.out.feature, by:0)
     )
-    Generate_Report(Monomer_Relaxation
-                        .out.pdb
-                        .mix(Multimer_Relaxation.out.pdb)
-                        .map{ fasta,preset, files ->
-                                return tuple(fasta,preset, files.flatten())
-                        }
-                        .combine(Channel.fromPath("${projectDir}/assets/proteinfold_template.html"))
+    
+     Generate_Report(Monomer_Relaxation.out.pdb
+                            .mix(Multimer_Relaxation.out.pdb)
+                            .combine(Channel.fromPath("${projectDir}/assets/proteinfold_template.html"))
     )
 }
