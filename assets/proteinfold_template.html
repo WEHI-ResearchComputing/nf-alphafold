@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Protein Structure Prediction</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"
+      integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ=="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.rawgit.com/arose/ngl/v2.0.0-dev.37/dist/ngl.js"></script>
+
+    <style type="text/css">
+      canvas {
+        background-color: black;
+      }
+      button.btn.selected,
+      button.btn-canvas.selected img {
+        --tw-bg-opacity: 1;
+        border-color: rgb(79 70 229 / var(--tw-bg-opacity));
+      }
+      button.btn.selected:hover,
+      button.btn-canvas.selected:hover img {
+        --tw-bg-opacity: 1;
+        border-color: rgb(99 102 241 / var(--tw-bg-opacity));
+      }
+      button.btn.selected span,
+      button.btn-canvas.selected {
+        --tw-bg-opacity: 1;
+        color: rgb(79 70 229 / var(--tw-bg-opacity));
+      }
+      button.btn.selected span:hover,
+      button.btn-canvas.selected:hover {
+        --tw-bg-opacity: 1;
+        color: rgb(99 102 241 / var(--tw-bg-opacity));
+      }
+      .color {
+        justify-content: space-between;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 55, 0, 1) 0%,
+          rgba(216, 224, 6, 1) 33%,
+          rgba(34, 213, 238, 1) 66%,
+          rgba(3, 30, 148, 1) 100%
+        );
+      }
+      .ngl-viewport {
+        position: absolute;
+        width: 84px;
+        height: 84px;
+        visibility: hidden;
+        top: -9999px;
+        left: -9999px;
+      }
+      #lddt_container .modebar {
+        display: flex !important;
+        flex-direction: row !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Navigation bar -->
+    <nav class="p-6 flex justify-between items-center bg-gray-900">
+      <div class="flex-1 flex items-center gap-6">        
+      </div>
+
+      <div class="text-3xl sm:text-4xl font-bold tracking-tight text-white">Protein Structure Prediction</div>
+    </nav>
+
+    <!-- Sidebar & overlay -->
+    <aside
+      id="sidebar"
+      class="transform top-0 left-0 w-64 bg-white fixed h-full overflow-auto ease-in-out transition-all duration-300 z-50 -translate-x-full"
+    >
+      <div class="flex justify-end p-6">
+        <button onclick="toggleSidebar()">
+          <i class="bi bi-x text-3xl text-gray-900 hover:text-gray-400"></i>
+        </button>
+      </div>
+      <ul class="mt-4 *:font-semibold">
+        <li class="p-6 pl-12 hover:bg-gray-200 hover:cursor-pointer">
+          <a href="" class="block">Link 1</a>
+        </li>
+        <li class="p-6 pl-12 hover:bg-gray-200 hover:cursor-pointer">
+          <a href="" class="block">Link 2</a>
+        </li>
+        <li class="p-6 pl-12 hover:bg-gray-200 hover:cursor-pointer">
+          <a href="" class="block">Link 3</a>
+        </li>
+      </ul>
+    </aside>
+    <div
+      id="sidebar-overlay"
+      class="hidden top-0 left-0 w-full h-full bg-black opacity-75 z-40 hover:cursor-pointer"
+      onclick="toggleSidebar()"
+    ></div>
+
+    <!-- Page header -->
+    <!-- <header class="bg-gray-900">
+      <div class="p-12">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-white">Structure prediction</h1>
+      </div>
+    </header> -->
+
+    <!-- Main -->
+    <div class="xl:flex">
+      <!-- Left panel -->
+      <div class="relative flex flex-col flex-1 bg-black">
+        <!-- Canvas -->
+        <div class="w-full min-h-[60vh] xl:w-[65vw]" id="ngl-root"></div>
+
+        <!-- Message -->
+        <div
+          class="absolute top-0 left-0 hidden justify-center items-center w-full h-full text-white text-lg font-semibold"
+          id="ngl-nothing"
+        >
+          Please select a representation to display
+        </div>
+
+        <!-- Loading spinner -->
+        <div class="absolute top-0 left-0 flex justify-center items-center w-full h-full" id="ngl-loading">
+          <svg
+            aria-hidden="true"
+            class="inline w-16 h-16 text-white animate-spin fill-gray-300"
+            viewBox="0 0 100 101"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+              fill="currentColor"
+            />
+            <path
+              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+              fill="currentFill"
+            />
+          </svg>
+        </div>
+
+        <!-- Model confidence -->
+        <div
+          class="absolute w-56 top-0 left-0 m-6 p-6 shadow-md bg-gray-700 rounded hover:cursor-pointer hover:h-64 overflow-hidden h-24 transition-all ease-in-out duration-200"
+        >
+          <div class="flex justify-center">
+            <div class="w-44">
+              <div class="color h-6"></div>
+              <div class="flex justify-between mt-2 text-white">
+                <div>&lt;50</div>
+                <div>70</div>
+                <div>90+</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8">
+            <p class="text-sm text-white">
+              Alphafold produces a
+              <a
+                class="text-indigo-400 hover:text-indigo-300 hover:underline hover:decoration-dotted"
+                href="https://alphafold.ebi.ac.uk/faq#faq-5"
+                target="_blank"
+              >
+                per-residue confidence score (pLDDT)
+              </a>
+              between 0 and 100. Some regions below 50 pLDDT may be unstructured in isolation.
+            </p>
+          </div>
+        </div>
+
+        <!-- Carousel buttons -->
+        <button
+          type="button"
+          class="absolute top-0 start-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
+          onclick="prevModel()"
+        >
+          <span
+            class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 group-focus:outline-none"
+          >
+            <svg
+              class="w-4 h-4 text-white dark:text-gray-800 rtl:rotate-180"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 6 10"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 1 1 5l4 4"
+              />
+            </svg>
+            <span class="sr-only">Previous</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          class="absolute top-0 end-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none"
+          onclick="nextModel()"
+        >
+          <span
+            class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 group-hover:bg-white/50 group-focus:outline-none"
+          >
+            <svg
+              class="w-4 h-4 text-white dark:text-gray-800 rtl:rotate-180"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 6 10"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="m1 9 4-4-4-4"
+              />
+            </svg>
+            <span class="sr-only">Next</span>
+          </span>
+        </button>
+
+        <!-- Canvas buttons -->
+        <div id="canvas_button_container" class="flex-1 p-6 pb-2 flex justify-center items-end bg-black gap-6">
+          <!-- <button
+            class="selected group btn btn-canvas w-24 rounded bg-black py-3 text-sm font-semibold text-white hover:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+            id="btn-ranked_0"
+            onclick="setModel(0);"
+          >
+            <img
+              id="image0"
+              class="inline-block w-20 h-20 border-2 border-gray-300 group-hover:border-gray-400 rounded-md mb-2"
+            />
+
+            Ranked 0
+          </button>
+
+          <button
+            class="group btn btn-canvas w-24 rounded bg-black py-3 text-sm font-semibold text-white hover:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+            id="btn-ranked_1"
+            onclick="setModel(1);"
+          >
+            <img
+              id="image1"
+              class="inline-block w-20 h-20 border-2 border-gray-300 group-hover:border-gray-400 rounded-md mb-2"
+            />
+            Ranked 1
+          </button>
+
+          <button
+            class="group btn btn-canvas w-24 rounded bg-black py-3 text-sm font-semibold text-white hover:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+            id="btn-ranked_2"
+            onclick="setModel(2);"
+          >
+            <img
+              id="image2"
+              class="inline-block w-20 h-20 border-2 border-gray-300 group-hover:border-gray-400 rounded-md mb-2"
+            />
+            Ranked 2
+          </button>
+
+          <button
+            class="group btn btn-canvas w-24 rounded bg-black py-3 text-sm font-semibold text-white hover:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+            id="btn-ranked_3"
+            onclick="setModel(3);"
+          >
+            <img
+              id="image3"
+              class="inline-block w-20 h-20 border-2 border-gray-300 group-hover:border-gray-400 rounded-md mb-2"
+            />
+            Ranked 3
+          </button>
+
+          <button
+            class="group btn btn-canvas w-24 rounded bg-black py-3 text-sm font-semibold text-white hover:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+            id="btn-ranked_4"
+            onclick="setModel(4);"
+          >
+            <img
+              id="image4"
+              class="inline-block w-20 h-20 border-2 border-gray-300 group-hover:border-gray-400 rounded-md mb-2"
+            />
+            Ranked 4
+          </button> -->
+        </div>
+        <!-- <div class="text-white mx-auto font-semibold pb-4">
+          The top-ranked structures predicted by Alphafold
+        </div> -->
+      </div>
+
+      <!-- Right panel -->
+      <div class="flex-1 p-6 bg-gray-100 w-full flex xl:flex-col gap-12 xl:justify-between">
+        <div>
+          <div class="text-2xl font-bold tracking-tight text-gray-900">Information</div>
+          <!-- Structure information -->
+          <div id="structure-info" class="mt-2 mb-6 shadow-md p-6 bg-white rounded border font-semibold">
+            <div class="flex justify-between">
+              <div>Program: <span class="font-normal">*prog_name*</span></div>
+              <div>ID: <span class="font-normal">*sample_name*</span></div>
+            </div>
+            <div>Average: <span id="lddt-average" class="font-normal"></span></div>
+          </div>
+
+          <div>
+            <div class="text-2xl font-bold tracking-tight text-gray-900">Navigation</div>
+
+            <!-- Directions -->
+            <div class="text-black text-sm shadow-md p-6 bg-white rounded border mt-2">
+              <div class="mb-4">
+                <span class="rounded font-mono text-black font-semibold text-sm bg-gray-200 py-1 px-2"
+                  >Scroll up/down</span
+                >
+                to zoom in and out
+              </div>
+              <div class="mb-4">
+                <span class="rounded font-mono text-black font-semibold text-sm bg-gray-200 py-1 px-2"
+                  >Click + drag</span
+                >
+                to rotate the structure
+              </div>
+              <div class="mb-4">
+                <span class="rounded font-mono text-black font-semibold text-sm bg-gray-200 py-1 px-2"
+                  >CTRL + click + drag</span
+                >
+                to move the structure
+              </div>
+              <div>
+                <span class="rounded text-black font-mono font-semibold text-sm bg-gray-200 py-1 px-2">Click</span>
+                an atom to bring it into focus
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div>
+          <div class="mb-4">
+            <div class="text-2xl font-bold tracking-tight text-gray-900">Toggle representations</div>
+            <div class="mt-2">
+              <button
+                class="btn selected mr-2 mb-4 w-28 rounded-md bg-white border border-gray-300 py-3 text-sm font-semibold text-gray-800 shadow-md hover:border-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+                id="btn-cartoon"
+                onclick="toggleModelRepresentation('cartoon');"
+              >
+                <span class="text-gray-300 mr-0.5"><i class="bi bi-check-circle-fill"></i></span>
+                Cartoon
+              </button>
+              <button
+                class="btn mr-2 mb-4 w-28 rounded-md bg-white border border-gray-300 py-3 text-sm font-semibold text-gray-800 shadow-md hover:border-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+                id="btn-ball-stick"
+                onclick="toggleModelRepresentation('ball+stick');"
+              >
+                <span class="text-gray-300 mr-0.5"><i class="bi bi-check-circle-fill"></i></span>
+                Ball + stick
+              </button>
+              <button
+                class="btn mr-2 mb-4 w-28 rounded-md bg-white border border-gray-300 py-3 text-sm font-semibold text-gray-800 shadow-md hover:border-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+                id="btn-surface"
+                onclick="toggleModelRepresentation('surface');"
+              >
+                <span class="text-gray-300 mr-0.5"><i class="bi bi-check-circle-fill"></i></span>
+                Surface
+              </button>
+              <button
+                class="btn mr-2 mb-4 w-28 rounded-md bg-white border border-gray-300 py-3 text-sm font-semibold text-gray-800 shadow-md hover:border-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+                id="btn-backbone"
+                onclick="toggleModelRepresentation('backbone');"
+              >
+                <span class="text-gray-300 mr-0.5"><i class="bi bi-check-circle-fill"></i></span>
+                Backbone
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-start gap-2 flex-col xl:flex-row">
+              <div class="mb-4 grow-0">
+                <div class="text-2xl font-bold tracking-tight text-gray-900">Actions</div>
+                <div class="mt-2">
+                  <button
+                    class="btn selected mr-2 mb-4 w-28 rounded-md bg-white border border-gray-300 py-3 text-sm font-semibold text-gray-800 shadow-md hover:border-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+                    id="btn-toggle-spin"
+                    onclick="toggleSpin()"
+                  >
+                    <span class="text-gray-300 mr-0.5"><i class="bi bi-check-circle-fill"></i></span>
+                    Toggle spin
+                  </button>
+
+                  <button
+                    class="btn mr-2 mb-4 w-28 rounded-md bg-white border border-gray-300 py-3 text-sm font-semibold text-gray-800 shadow-md hover:border-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+                    id="btn-toggle-dark"
+                    onclick="toggleDark()"
+                  >
+                    <span class="text-gray-300 mr-0.5"><i class="bi bi-check-circle-fill"></i></span>
+                    Light mode
+                  </button>
+                </div>
+              </div>
+              <div class="grow-0">
+                <div class="text-2xl font-bold tracking-tight text-gray-900">Download</div>
+
+                <div class="mt-2">
+                  <button
+                    type="button"
+                    class="mr-2 mb-4 w-28 rounded bg-green-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                    onclick="downloadPng()"
+                  >
+                    <span class="text-white mr-0.5">
+                      <i class="bi bi-camera-fill"></i>
+                    </span>
+                    Snapshot
+                  </button>
+                  <button
+                    type="button"
+                    class="mr-2 mb-4 w-28 rounded bg-green-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                    onclick="downloadPdb()"
+                  >
+                    <span class="text-white mr-0.5">
+                      <i class="bi bi-file-earmark-arrow-down-fill"></i>
+                    </span>
+                    PDB
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div id="viewport0" class="ngl-viewport"></div>
+      <div id="viewport1" class="ngl-viewport"></div>
+      <div id="viewport2" class="ngl-viewport"></div>
+      <div id="viewport3" class="ngl-viewport"></div>
+      <div id="viewport4" class="ngl-viewport"></div>
+    </div>
+
+    <!-- Plots -->
+    <div
+      class="bg-gray-200 p-24 flex flex-col justify-center items-center gap-24 2xl:flex-row lg:justify-between 2xl:justify-around"
+    >
+      <div id="seq_coverage_container" class="flex-1">
+        <div class="text-4xl font-bold tracking-tight mb-6">Sequence Coverage</div>
+        <div class="p-6 bg-white shadow-md rounded">
+          <div class="w-[1260px] flex justify-center items-center mx-auto">
+            <img class="w-[1200px] h-[400px]" id="seq_cov_img" src="seq_coverage.png" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-1">
+        <div id="plddt-title" class="text-4xl font-bold tracking-tight mb-6">Predicted LDDT</div>
+        <div class="p-6 bg-white shadow-md rounded">
+          <div class="w-[1260px] flex justify-center items-center mx-auto">
+            <img class="w-[1200px] h-[400px]" id="seq_cov_img" src="plddt.png" />
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-1">
+        <div id="pae-title" class="text-4xl font-bold tracking-tight mb-6">Predicted Aligned Error</div>
+        <div class="p-6 bg-white shadow-md rounded">
+          <div class="w-[1260px] flex justify-center items-center mx-auto">
+            <img class="w-[1200px] h-[800px]" id="seq_cov_img" src="pae.png" />
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script type="text/javascript">
+    // Render NGLviewer for PDB files
+
+    // State management has been implemented with vanillaJS but could have used
+    // Vue - it's a fairly simple use case so a global 'state' object works fine
+    // without complicating things too much.
+
+    // Define a custom color scheme to represent model confidence consistently
+    // across different representations
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebar-overlay");
+      if (sidebar.classList.contains("translate-x-0")) {
+        sidebar.classList.replace("translate-x-0", "-translate-x-full");
+        sidebarOverlay.classList.replace("fixed", "hidden");
+        document.body.style.overflow = "";
+      } else {
+        sidebar.classList.replace("-translate-x-full", "translate-x-0");
+        sidebarOverlay.classList.replace("hidden", "fixed");
+        document.body.style.overflow = "hidden";
+      }
+    }
+
+    const colorScale = chroma.scale(["red", "yellow", "green", "cyan", "blue"]).mode("lab").domain([0, 0.9]);
+
+    const confidenceScheme = NGL.ColormakerRegistry.addScheme(function (params) {
+      this.atomColor = function (atom) {
+        // Actually model confidence (pLDDT)
+        const c = atom.bfactor;
+        const BREAK_RED = 40; // Below this is just plain red
+        let range, r, g, b;
+
+        if (c < BREAK_RED) {
+          return 0xff0000;
+        }
+        const p = (c - BREAK_RED) / (100 - BREAK_RED);
+        return eval(colorScale(p).hex().replace("#", "0x"));
+      };
+    });
+
+    // NGL color schemes https://nglviewer.org/ngl/api/manual/usage/coloring.html
+    const COLORSCHEME = confidenceScheme; //'bfactor'
+
+    const MODELS = ["ranked_0.pdb", "ranked_1.pdb", "ranked_2.pdb", "ranked_3.pdb", "ranked_4.pdb"];
+
+    const MODELS_DATA = [
+      "*_data_ranked_0.pdb*",
+      "*_data_ranked_1.pdb*",
+      "*_data_ranked_2.pdb*",
+      "*_data_ranked_3.pdb*",
+      "*_data_ranked_4.pdb*",
+    ];
+
+    const LDDT_IMGS = [
+      "coverage_LDDT_0.png",
+      "coverage_LDDT_1.png",
+      "coverage_LDDT_2.png",
+      "coverage_LDDT_3.png",
+      "coverage_LDDT_4.png",
+    ];
+
+    const LDDT_AVERAGES = [];
+
+    const REPRESENTATIONS = ["cartoon", "ball+stick", "surface", "backbone"];
+
+    const DEFAULT_REPRESENTATION = REPRESENTATIONS[0];
+    const MAX_CLICK_INTERVAL_MS = 500; // For debouncing model clicks
+
+    let stage;
+    let nonceSetModel;
+
+    let state = {
+      model: 0,
+      modelObject: null,
+      representations: {},
+      colorScheme: "bfactor",
+      darkMode: true,
+      loading: 1,
+      spin: true,
+    };
+
+    const uri = (i) => MODELS_DATA[i];
+    // Switch to this function to return sample model URI (local dev)
+    // const uri = (i) => `https://raw.githubusercontent.com/neoformit/alphafold-galaxy/main/data/${MODELS[i]}`;
+
+    document.addEventListener("DOMContentLoaded", async function () {
+      // Can set debug for development if NGL is being... funny
+      // NGL.setDebug(true)
+
+      // Create NGL Stage object
+      stage = new NGL.Stage("ngl-root", { backgroundColor: "black" });
+
+      // Handle window resizing
+      window.addEventListener("resize", () => stage.handleResize());
+
+      document.getElementById("lddt-average").textContent = LDDT_AVERAGES[0];
+
+      loadModel();
+      loadModelImage();
+      generateButtons();
+
+      while (true) {
+        if (!state.loading) {
+          // Reload page if NGL failed to display. Weird occassional bug.
+          const canvas = document.querySelector("#ngl-root canvas");
+          canvas.height < 50 && window.reload();
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    });
+
+    // Models ------------------------------------------------------------------
+
+    const setModel = (ix) => {
+      state.model = ix;
+      //document.getElementById("lddt_img").src = LDDT_IMGS[ix];
+      document.getElementById("lddt-average").textContent = LDDT_AVERAGES[ix];
+      stage.removeComponent(state.modelObject);
+      setLoading(1);
+
+      // Debounce rapid model clicking with a nonce
+      nonceSetModel = new Object();
+      const localNonce = nonceSetModel;
+      setTimeout(() => {
+        if (localNonce === nonceSetModel) {
+          // The user has stopped clicking, hurray...
+          loadModel().then(updateButtons);
+        }
+      }, MAX_CLICK_INTERVAL_MS);
+    };
+
+    const nextModel = () => {
+      const model = state.model === 4 ? 0 : (state.model += 1);
+      setModel(model);
+    };
+
+    const prevModel = () => {
+      const model = state.model === 0 ? 4 : (state.model -= 1);
+      setModel(model);
+    };
+
+    const loadModel = () => {
+      reps = Object.keys(state.representations);
+      if (reps.length) {
+        state.representations = {};
+      } else {
+        reps = [DEFAULT_REPRESENTATION];
+      }
+
+      var stringBlob = new Blob([uri(state.model)], { type: "text/plain" });
+
+      // Load PDB entry
+      return stage.loadFile(stringBlob, { ext: "pdb" }).then((o) => {
+        state.modelObject = o;
+        reps.forEach((r) => addModelRepresentation(r));
+        stage.setSpin(state.spin);
+        o.autoView();
+        setLoading(0);
+      });
+    };
+
+    const loadModelImage = () => {
+      const stages = [];
+      const promises = [];
+
+      for (let index = 0; index < MODELS.length; index++) {
+        const promise = new Promise((resolve, reject) => {
+          const stringBlob = new Blob([uri(index)], { type: "text/plain" });
+          const stage = new NGL.Stage(`viewport${index}`, {
+            backgroundColor: "black",
+          });
+          stages.push(stage);
+
+          stage
+            .loadFile(stringBlob, { ext: "pdb" })
+            .then((o) => {
+              o.addRepresentation("cartoon", {
+                colorScheme: COLORSCHEME,
+              });
+              stage.autoView();
+
+              stage
+                .makeImage({ factor: 2, antialias: true, trim: false })
+                .then((blob) => {
+                  const url = URL.createObjectURL(blob);
+                  resolve({ index, url });
+                  stage.dispose();
+                  document.getElementById(`viewport${index}`).remove();
+                })
+                .catch((err) => {
+                  console.error(`Error capturing image for protein ${index}:`, err);
+                });
+            })
+            .catch((err) => {
+              console.error(`Error loading file for protein ${index}:`, err);
+            });
+        });
+        promises.push(promise);
+      }
+
+      Promise.all(promises)
+        .then((results) => {
+          results.forEach(({ index, url }) => {
+            const img = document.getElementById(`image${index}`);
+            img.src = url;
+          });
+        })
+        .catch((err) => {
+          console.error("Error processing one or more images:", err);
+        });
+    };
+
+    // Representations ---------------------------------------------------------
+
+    const toggleModelRepresentation = (rep) => {
+      rep in state.representations ? removeModelRepresentation(rep) : addModelRepresentation(rep);
+    };
+
+    const addModelRepresentation = (rep) => {
+      state.representations[rep] = state.modelObject.addRepresentation(rep, {
+        colorScheme: COLORSCHEME,
+      });
+      updateButtons();
+    };
+
+    const removeModelRepresentation = (rep) => {
+      o = state.representations[rep];
+      state.modelObject.removeRepresentation(o);
+      delete state.representations[rep];
+      updateButtons();
+    };
+
+    const clearModelRepresentations = () => {
+      state.modelObject && state.modelObject.removeAllRepresentations();
+      state.representations = {};
+    };
+
+    // Actions -----------------------------------------------------------------
+
+    const toggleDark = () => {
+      const buttons = document.querySelectorAll(".btn-canvas");
+      const nglNothing = document.getElementById("ngl-nothing");
+      const structureInfo = document.getElementById("structure-info");
+      const canvasButtonContainer = document.getElementById("canvas_button_container");
+      state.darkMode = !state.darkMode;
+      stage.setParameters({
+        backgroundColor: state.darkMode ? "black" : "white",
+      });
+      if (state.darkMode) {
+        nglNothing.classList.replace("text-black", "text-white");
+        structureInfo.classList.replace("text-black", "text-white");
+        canvasButtonContainer.classList.replace("bg-white", "bg-black");
+        buttons.forEach((button) => {
+          button.classList.remove("bg-white", "text-gray-900");
+          button.classList.add("bg-black", "text-white");
+        });
+      } else {
+        nglNothing.classList.replace("text-white", "text-black");
+        structureInfo.classList.replace("text-white", "text-black");
+        canvasButtonContainer.classList.replace("bg-black", "bg-white");
+        buttons.forEach((button) => {
+          button.classList.remove("bg-black", "text-white");
+          button.classList.add("bg-white", "text-gray-900");
+        });
+      }
+
+      const btn = document.querySelector("#btn-toggle-dark");
+      btn && btn.classList.toggle("selected");
+    };
+
+    const setLoading = (state) => {
+      document.getElementById("ngl-loading").style.display = state ? "flex" : "none";
+      state.loading = state;
+    };
+
+    const toggleSpin = () => {
+      stage.toggleSpin();
+      const btn = document.querySelector("#btn-toggle-spin");
+      btn && btn.classList.toggle("selected");
+      state.spin = !state.spin;
+    };
+
+    const downloadPng = () => {
+      const params = {
+        factor: 3,
+        antialias: true,
+      };
+      stage.makeImage(params).then((blob) => {
+        const name = MODELS[state.model].replace(".pdb", ".png");
+        const url = URL.createObjectURL(blob);
+        makeDownload(url, name);
+      });
+    };
+
+    const downloadPdb = () => {
+      const url = uri(state.model);
+      const name = `alphafold_${MODELS[state.model]}`;
+      makeDownload(url, name);
+    };
+
+    const makeDownload = (url, name) => {
+      // Will not work with cross-origin urls (i.e. during development)
+      console.log(`Creating file download for ${name}, href ${url}`);
+      const saveLink = document.createElement("a");
+      saveLink.href = url;
+      saveLink.download = name;
+      document.body.appendChild(saveLink);
+      saveLink.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        })
+      );
+      document.body.removeChild(saveLink);
+    };
+
+    const generateButtons = () => {
+      const container = document.getElementById("canvas_button_container");
+
+      MODELS.forEach((model, index) => {
+        const button = document.createElement("button");
+        button.className =
+          "selected group btn btn-canvas w-24 rounded bg-black py-3 text-sm font-semibold text-white hover:text-gray-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800";
+        button.id = `btn-${model.split(".")[0]}`; // Use model name without extension as ID
+        button.onclick = () => setModel(index);
+        button.innerHTML = `
+      <img
+        id="image${index}"
+        class="inline-block w-20 h-20 border-2 border-gray-300 group-hover:border-gray-400 rounded-md mb-2"
+      />
+      ${model.split(".")[0]} <!-- Display the model name without extension -->
+    `;
+
+        container.appendChild(button);
+      });
+    };
+
+    const updateButtons = () => {
+      MODELS.forEach((name, i) => {
+        const id = `#btn-${name.replace(".pdb", "")}`;
+        const btn = document.querySelector(id);
+        if (!btn) return;
+        i == state.model ? btn.classList.add("selected") : btn.classList.remove("selected");
+      });
+
+      REPRESENTATIONS.forEach((name) => {
+        const id = `#btn-${name}`.replace("+", "-");
+        const btn = document.querySelector(id);
+        if (!btn) return;
+        if (name in state.representations) {
+          btn.classList.add("selected");
+        } else {
+          btn.classList.remove("selected");
+        }
+      });
+
+      // Show "Nothing to display" if no representations are selected
+      document.querySelector("#ngl-nothing").style.display = Object.keys(state.representations).length
+        ? "none"
+        : "flex";
+    };
+  </script>
+</html>
