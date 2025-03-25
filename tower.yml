@@ -1,3 +1,5 @@
 reports:
   "**/*.html":
     display: "Reports"
+  "**/*.pdf":
+    display: "Plots"
