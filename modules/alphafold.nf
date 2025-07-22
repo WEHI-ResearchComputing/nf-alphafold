@@ -1,5 +1,5 @@
 process CountUniqueSequences {
-    label 'report'
+    label 'Count'
 
     tag "${fasta}"
 
