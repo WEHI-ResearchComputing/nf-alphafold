@@ -1,6 +1,6 @@
 process Generate_Report {
     tag "${fasta}"
-    label 'report'
+    label 'Report'
 
     publishDir "${params.outdir}/", mode: 'copy', pattern: "*.html"
 
