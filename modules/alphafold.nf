@@ -22,7 +22,7 @@ process ALPHAFOLD_Feature{
     label 'Alphafold2'
 
     tag "${fasta}"
-
+    errorStrategy 'ignore'
     publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
     publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/msas/*"
 
