@@ -1,18 +1,4 @@
 #!/usr/bin/env nextflow
-import java.text.SimpleDateFormat
-println "*****************************************************"
-println "*  Nextflow <name> pipeline                         *"
-println "*  A Nextflow wrapper pipeline                      *"
-println "*  Written by Julie Iskander,                       *"
-println "*              Research Computing Platform          *"
-println "*  research.computing@wehi.edu.au                   *"
-println "*                                                   *"
-println "*****************************************************"
-println " Required Pipeline parameters                        "
-println "-----------------------------------------------------"
-println "Input  Directory   : $params.inputdir                "
-println "Output Directory   : $params.outdir                  " 
-println "*****************************************************"
 
 include {  CountUniqueSequences } from './modules/alphafold.nf'
 include {  ALPHAFOLD_Feature as Monomer_Feature } from './modules/alphafold.nf'
@@ -21,9 +7,30 @@ include {  ALPHAFOLD_Feature as Multimer_Feature } from './modules/alphafold.nf'
 include {  ALPHAFOLD_Inference as Monomer_Inference } from './modules/alphafold.nf'
 include {  ALPHAFOLD_Inference as Multimer_Inference } from './modules/alphafold.nf'
 
+include {  ALPHAFOLD_Relax_Only as Monomer_Relaxation } from './modules/alphafold.nf'
+include {  ALPHAFOLD_Relax_Only as Multimer_Relaxation } from './modules/alphafold.nf'
+
+
+include { Generate_Report } from './modules/generate_report'
+
 
 
 workflow {
+    
+    println "*****************************************************"
+    println "*  Nextflow <name> pipeline                         *"
+    println "*  A Nextflow wrapper pipeline                      *"
+    println "*  Written by Julie Iskander,                       *"
+    println "*              Research Computing Platform          *"
+    println "*  research.computing@wehi.edu.au                   *"
+    println "*                                                   *"
+    println "*****************************************************"
+    println " Required Pipeline parameters                        "
+    println "-----------------------------------------------------"
+    println "Input  Directory   : $params.inputdir                "
+    println "Output Directory   : $params.outdir                  "
+    println "Use Calculated MSA : $params.msa_calculated          " 
+    println "*****************************************************"
 
     def query_ch = Channel.fromPath(params.inputdir+"/*.fasta",checkIfExists:true)
                           .ifEmpty {
@@ -36,6 +43,7 @@ workflow {
     Channel.from(params.model_indices.split(',').toList())
            .set { model_indicies_ch }
     
+    number_of_model_output= params.model_indices.split(',').size()
     count_ch=CountUniqueSequences(query_ch)
 
     count_ch.map{ name,file,count ->
@@ -45,15 +53,30 @@ workflow {
                 monomer  : count == 1 
                     return tuple(name,file,"monomer_ptm")
                 multimer : count > 1 
-                    return tuple(name,file,"multimer")
+                   return tuple(name,file,"multimer")
             }
             .set { inference_ch }
     
-    Mutli_feature_ch=Multimer_Feature(inference_ch.multimer)
+    Multimer_Feature(inference_ch.multimer)
+    Monomer_Feature(inference_ch.monomer)
     
-    Mono_feature_ch=Monomer_Feature(inference_ch.monomer)
+    Monomer_Inference(Monomer_Feature.out.meta.combine(model_indicies_ch).combine(Monomer_Feature.out.feature, by:0))
+    Multimer_Inference(Multimer_Feature.out.meta.combine(model_indicies_ch).combine(Multimer_Feature.out.feature, by:0))
 
-    Monomer_Inference(Mono_feature_ch.output.combine(model_indicies_ch))
-    Multimer_Inference(Mutli_feature_ch.output.combine(model_indicies_ch))
-    
+    Monomer_Relaxation(
+            Monomer_Inference.out.pdb.groupTuple(by:[0,1],size:number_of_model_output)
+            .join(Monomer_Inference.out.pdb_meta, by:[0,1])
+            .join(Monomer_Feature.out.feature, by:0)
+    )
+    Multimer_Relaxation(
+        Multimer_Inference.out.pdb.groupTuple(by:[0,1],size:number_of_model_output)
+            .join(Multimer_Inference.out.pdb_meta, by:[0,1])
+            .join(Multimer_Feature.out.feature, by:0)
+    )
+    println "Resolved template path: ${projectDir}/assets/proteinfold_template.html"
+    Generate_Report(Monomer_Relaxation.out.pdb
+                            .mix(Multimer_Relaxation.out.pdb)
+                            .combine(Channel.fromPath("${projectDir}/assets/proteinfold_template.html"))
+                            
+    )
 }

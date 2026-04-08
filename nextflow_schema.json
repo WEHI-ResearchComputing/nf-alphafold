@@ -23,8 +23,9 @@
                 },
                 "inputdir": {
                     "type": "string",
-                    "default": "/vast/scratch/users/iskander.j/nf-alphafold/example/af_test232",
-                    "description": "The directory where fasta files to be folded reside"
+                    "format": "directory-path",
+                    "description": "The directory where fasta files to be folded reside",
+                    "fa_icon": "fas fa-folder-open"
                 }
             }
         },
@@ -34,23 +35,27 @@
             "description": "",
             "default": "",
             "properties": {
+                "msa_calculated": {
+                    "type": "boolean",
+                    "default": true
+                },
                 "model_indices": {
                     "type": "string",
-                    "default": "0",
+                    "default": "0,1,2,3,4",
                     "description": "Model indices coma-separated list. Values can be any combination of number between 0,4 example: 0,1 or 0,2,3 or 0,1,2,3,4 or 1"
                 },
-               
                 "model_to_relax": {
                     "type": "string",
                     "default": "best",
                     "description": "Values can be (all|best|none)"
                 },
                 "max_template_date": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "2024-03-01"
                 },
                 "num_predictions": {
                     "type": "integer",
-                    "default": 2
+                    "default": 1
                 },
                 "database_preset": {
                     "type": "string",
@@ -62,7 +67,8 @@
                 "model_to_relax",
                 "max_template_date",
                 "num_predictions",
-                "database_preset"
+                "database_preset",
+                "msa_calculated"
             ]
         },
         "extra_parameters": {
