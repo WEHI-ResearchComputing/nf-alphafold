@@ -23,8 +23,8 @@ process ALPHAFOLD_Feature{
 
     tag "${fasta}"
     errorStrategy 'ignore'
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
-    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/msas/*"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.pkl"
+    publishDir "${params.outdir}", mode: 'move', pattern: "${fasta}/msas/*"
 
     input:
     tuple val(fasta),path(fasta_file),val(preset)
@@ -53,10 +53,10 @@ process ALPHAFOLD_Inference{
     label 'Alphafold2'
     tag "${fasta}"
 
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb"
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pkl"
-    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.pdb"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.json"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.pkl"
+    publishDir "${params.outdir}", mode: 'move', pattern: "${fasta}/plots/*.pdf"
 
     output:
     path("${fasta}/*.pdb")
