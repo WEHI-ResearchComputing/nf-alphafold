@@ -22,9 +22,9 @@ process ALPHAFOLD_Feature{
     label 'Alphafold2_cpu'
 
     tag "${fasta}"
-
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}"
-    
+    errorStrategy 'ignore'
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.pkl"
+    publishDir "${params.outdir}", mode: 'move', pattern: "${fasta}/msas/*"
 
     input:
     tuple val(fasta),path(fasta_file),val(preset)
@@ -50,12 +50,10 @@ process ALPHAFOLD_Inference
 
     tag "${fasta}"
 
-    stageInMode 'copy'
-
-
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.pdb"
-    publishDir "${params.outdir}/", mode: 'copy', pattern: "${fasta}/*.json"
-    publishDir "${params.outdir}", mode: 'copy', pattern: "${fasta}/plots/*.pdf"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.pdb"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.json"
+    publishDir "${params.outdir}/", mode: 'move', pattern: "${fasta}/*.pkl"
+    publishDir "${params.outdir}", mode: 'move', pattern: "${fasta}/plots/*.pdf"
 
     
     input:
