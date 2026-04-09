@@ -107,7 +107,7 @@ process ALPHAFOLD_Relax_Only{
     alphafold  -o ./ -t $params.max_template_date \
                -g  true \
                -m $preset  \
-               -n 0,1,2,3,4 \
+               -n $params.model_indices \
                -j \
                -i ${params.num_predictions} \
                -r ${params.model_to_relax} \
